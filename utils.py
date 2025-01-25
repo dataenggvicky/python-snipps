@@ -35,6 +35,14 @@ def validate_data(df, columns):
 
     return df
 
+def filter_columns(df, file_columns, table_columns):
+    """Filter DataFrame to match table columns."""
+    missing_columns = [col for col in table_columns if col not in file_columns]
+    if missing_columns:
+        raise ValueError(f"Missing columns in source data: {missing_columns}")
+
+    return df.select(table_columns)
+
 def convert_to_pandas(df):
     """Convert Spark DataFrame to pandas DataFrame."""
     return df.toPandas()
