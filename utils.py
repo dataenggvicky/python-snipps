@@ -11,6 +11,47 @@ def get_secrets(secret_name, region_name):
     secret = json.loads(response["SecretString"])
     return secret
 
+def get_secrets_cross_account(secret_name, region_name, iam_role_arn, glue_job_name):
+    """
+    Retrieve secrets from another AWS account using an IAM role and Glue job name as the session name.
+
+    Args:
+        secret_name (str): The name of the secret to retrieve.
+        region_name (str): The AWS region where the secret is stored.
+        iam_role_arn (str): The ARN of the IAM role to assume.
+        glue_job_name (str): The name of the Glue job to use as the session name.
+
+    Returns:
+        dict: The secret retrieved from AWS Secrets Manager.
+
+    Raises:
+        botocore.exceptions.ClientError: If there is an error retrieving the secret.
+    """
+    sts_client = boto3.client("sts", region_name=region_name)
+    assumed_role = sts_client.assume_role(
+        RoleArn=iam_role_arn,
+        RoleSessionName=glue_job_name
+    )
+    credentials = assumed_role["Credentials"]
+
+    client = boto3.client(
+        "secretsmanager",
+        region_name=region_name,
+        aws_access_key_id=credentials["AccessKeyId"],
+        aws_secret_access_key=credentials["SecretAccessKey"],
+        aws_session_token=credentials["SessionToken"]
+    )
+    try:
+        response = client.get_secret_value(SecretId=secret_name)
+    except client.exceptions.ResourceNotFoundException:
+        raise ValueError(f"The requested secret {secret_name} was not found")
+    except client.exceptions.DecryptionFailure as e:
+        raise ValueError(f"The requested secret can't be decrypted using the provided KMS key: {e}")
+    
+    response = client.get_secret_value(SecretId=secret_name)
+    secret = json.loads(response["SecretString"])
+    return secret
+
 def load_csv_to_dataframe(spark, s3_path):
     """Load CSV files from S3 into a Spark DataFrame."""
     return spark.read.option("header", "true").csv(s3_path)
