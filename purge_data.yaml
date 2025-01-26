@@ -1,0 +1,15 @@
+redshift_config:
+  cluster_id: "your-cluster-id"
+  secret_arn: "arn:aws:secretsmanager:region:account-id:secret:secret-name"
+  database: "dev"
+  s3_export_path: "s3://your-bucket/path/"
+
+tables:
+  - table_name: "sales"
+    date_field: "sale_date"
+    date_format: "YYYY-MM-DD"
+    days_to_retain: 365
+
+  - table_name: "logs"
+    date_field: "log_time"
+    months_to_retain: 6
